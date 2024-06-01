@@ -1,30 +1,29 @@
 ---
-title: 'Reproducible Research: Peer Assessment 1'
-Name: Ascandari AbdulAziz
-output:
-  pdf_document: default
+title: "Reproducible Research: Peer Assessment 1"
+Name : Ascandari AbdulAziz
+output: 
   html_document:
-    keep_md: yes
+    keep_md: true
 ---
 
 
 ## Loading and preprocessing the data
 Unzip the folder and read in the data in the activity.csv file.
 
-```{r, echo=TRUE}
+
+```r
 if (!file.exists('activity.csv')) {
   unzip(zipfile = "activity.zip")
 }
 
 activityData <- read.csv(file="activity.csv", header=TRUE)
+```
 
-```{r}
-
-
+```r
 ## What is mean total number of steps taken per day?
+```
 
-```{r, echo=TRUE}
-
+```r
 # Calculate the total steps taken per day
 totalSteps <- aggregate(steps ~ date, activityData, FUN=sum)
 
@@ -32,24 +31,37 @@ totalSteps <- aggregate(steps ~ date, activityData, FUN=sum)
 hist(totalSteps$steps,
      main = "Total Steps per Day",
      xlab = "Number of Steps")
+```
 
+![](PA1_template_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
+
+```r
 # Calculate and report the mean and median of total steps taken per day
 meanSteps <- mean(totalSteps$steps, na.rm = TRUE)
 medSteps <- median(totalSteps$steps, na.rm = TRUE)
 
 #The mean steps taken per day is :
   meanSteps
+```
 
+```
+## [1] 10766.19
+```
+
+```r
 #Median Number of Steps Taken per Day is :
   medSteps
+```
 
-```{r}
+```
+## [1] 10765
+```
 
+```r
 ## What is the average daily activity pattern?
+```
 
-
-```{r, echo=TRUE}
-
+```r
 # Make a time-series plot of the 5-minute interval and the average number of
 # steps taken, averaged acoss all days.
 library(ggplot2)
@@ -60,33 +72,40 @@ ggplot(data = meanStepsByInt, aes(x = interval, y = steps)) +
   xlab("5-minute Interval") +
   ylab("Average Number of Steps") +
   theme(plot.title = element_text(hjust = 0.5))
+```
 
-```{r}
+![](PA1_template_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
 
+```r
 # Which 5-minute interval across all days contain the maximum number of steps
+```
 
-```{r, echo=TRUE}
+```r
 # Which 5-minute interval across all days contain the maximum number of steps
 maxInt <- meanStepsByInt[which.max(meanStepsByInt$steps),]
 
 maxInt
+```
 
-```{r}
+```
+##     interval    steps
+## 104      835 206.1698
+```
 
+```r
 ## Imputing missing values
 #Calculate and report the total number of missing values in the dataset by using:
+```
 
-```{r, echo=TRUE}
-
+```r
 missingVals <- is.na(activityData$steps)
+```
 
-
-```{r}
-
+```r
 #We see that, there are 17568 missing values. We would substitute these missing values with the 5-day mean of that respective interval.In the next steps, we formulate a strategy for filling in all of the missing values.
+```
 
-```{r, echo=TRUE}
-
+```r
 # Create a new dataset that is equal to the original dataset but with 
 # the missing data filled in.
 imp_activityData <- transform(activityData,
@@ -101,25 +120,25 @@ impStepsByInt <- aggregate(steps ~ date, imp_activityData, FUN=sum)
 hist(impStepsByInt$steps,
      main = "Imputed Number of Steps Per Day",
      xlab = "Number of Steps")
+```
 
-```{r}
+![](PA1_template_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
 
 
-```{r, echo=TRUE}
-
+```r
 impMeanSteps <- mean(impStepsByInt$steps, na.rm = TRUE)
 impMedSteps <- median(impStepsByInt$steps, na.rm = TRUE)
 diffMean = impMeanSteps - meanSteps
 diffMed = impMedSteps - medSteps
 diffTotal = sum(impStepsByInt$steps) - sum(totalSteps$steps)
+```
 
-```{r}
-
+```r
 ## Are there differences in activity patterns between weekdays and weekends?
 #Create a new factor variable in the dataset with two levels - "weekend" and "weekday"
+```
 
-```{r, echo=TRUE}
-
+```r
 DayType <- function(date) {
   day <- weekdays(date)
   if (day %in% c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'))
@@ -142,7 +161,11 @@ ggplot(data = meanStepsByDay, aes(x = interval, y = steps)) +
   xlab("5-minute Interval") +
   ylab("Average Number of Steps") +
   theme(plot.title = element_text(hjust = 0.5))
-```{r}
+```
 
+![](PA1_template_files/figure-html/unnamed-chunk-15-1.png)<!-- -->
+
+```r
 #Conclusion
 #From the plot, we can conclude that there are differences in the number of steps taken during the weekend as compared to the weekdays.We have more steps taken in the weekdays than the weekend on average.
+```
