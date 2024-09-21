@@ -1,0 +1,183 @@
+---
+title: "Prediction Assignment"
+author: "AbdulAziz Ascandari"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Background
+
+In recent years, the proliferation of wearable devices such as Jawbone Up, Nike FuelBand, and Fitbit has made it increasingly easy and affordable to collect extensive data on personal activities. These devices have become integral tools for the quantified self movement—a community of individuals who systematically track various aspects of their lives. The primary motivations for this practice include improving health, identifying behavioral patterns, and exploring technology. While there is a wealth of data available on the quantity of activities performed, there is a notable gap in quantifying the quality or effectiveness of these activities. 
+
+
+## Aim
+
+In this project, the objective is to utilize data collected from accelerometers placed on the belt, forearm, arm, and dumbbell of six participants. These participants were instructed to perform barbell lifts, both correctly and incorrectly, in five distinct ways. The analysis and modeling for this project will be conducted using the h2o library, a powerful tool for machine learning.The data for the analysis is taken from <http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har>.
+
+## Analysis
+
+### Preprocessing
+
+### Load Libraries
+
+Here, we shall employ the h2o library for our prediction.
+
+```{r}
+library(h2o)
+library(caret)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+### Load and clean data
+
+```{r}
+set.seed(1234)
+training <- read.csv("pml-training.csv")
+
+# Remove near-zero variance features
+nzv <- nearZeroVar(training)
+training_clean <- training[, -nzv]
+
+# Remove columns with more than 95% missing values
+na_cols <- sapply(training_clean, function(x) mean(is.na(x))) > 0.95
+train_clean <- training_clean[, !na_cols]
+
+# Remove irrelevant columns (e.g., identifiers)
+train_clean <- train_clean[, -c(1:7)]  # Adjust the range as needed
+```
+
+### Data Splitting
+
+```{r}
+# Initialize H2O cluster
+h2o.init()
+
+# Convert data to H2O frame
+train_h2o <- as.h2o(train_clean)
+
+# Split into train, validation, and test sets (70%, 15%, 15%)
+splits <- h2o.splitFrame(data = train_h2o, ratios = c(0.7, 0.15), seed = 1234)
+train <- h2o.assign(splits[[1]], "train")
+valid <- h2o.assign(splits[[2]], "valid")
+test  <- h2o.assign(splits[[3]], "test")
+```
+
+#  Model Training
+
+### Gradient Boosting
+
+
+```{r}
+# Convert the response column 'classe' to a factor (categorical variable)
+train$classe <- as.factor(train$classe)
+valid$classe <- as.factor(valid$classe)
+
+y <- "classe"
+x <- setdiff(names(train), y)
+
+# Train GBM model
+gbm_model <- h2o.gbm(
+  x = x, y = y,
+  training_frame = train,
+  validation_frame = valid,
+  ntrees = 500, max_depth = 6, learn_rate = 0.1,
+  seed = 1234
+)
+```
+
+### Random Forest
+
+```{r}
+rf_model <- h2o.randomForest(
+  x = x, y = y,
+  training_frame = train,
+  validation_frame = valid,
+  ntrees = 500, max_depth = 6,
+  seed = 1234
+)
+```
+
+### Naive Bayes
+```{r}
+nb_model <- h2o.naiveBayes(
+  x = x, y = y,
+  training_frame = train,
+  validation_frame = valid,
+  nfolds = 10,
+  seed = 1234
+)
+```
+
+### XGBoost
+
+```{r}
+xgb_model <- h2o.xgboost(
+  x = x, y = y,
+  training_frame = train,
+  validation_frame = valid,
+  seed = 1234
+)
+```
+
+# Model Evaluation
+
+### Compare R-squared for Each Model
+
+```{r}
+rsquare <- data.frame(
+  Model = c("GBM", "RF", "NB", "XGBoost"),
+  R2 = c(
+    h2o.r2(gbm_model, valid = TRUE),
+    h2o.r2(rf_model, valid = TRUE),
+    h2o.r2(nb_model, valid = TRUE),
+    h2o.r2(xgb_model, valid = TRUE)
+  )
+)
+
+# Plot the R-squared values
+ggplot(rsquare, aes(x = reorder(Model, -R2), y = R2)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Model Comparison (R-squared)", x = "Model", y = "R-squared")
+```
+
+From the R^2 plot the GBM model is selected. The confusion matrix is then printed.
+
+### Confusion matrix of the selected Model (GBM)
+
+```{r}
+h2o.confusionMatrix(gbm_model, valid = TRUE)
+```
+
+### Variable Importance Plot (GBM)
+
+```{r}
+h2o.varimp_plot(gbm_model)
+```
+
+# Model Testing
+
+## Load Test Data
+
+```{r}
+test_data <- read.csv("pml-testing.csv")
+test_h2o <- as.h2o(test_data)
+```
+
+## Predict Using the GBM Model
+
+```{r}
+predictions <- h2o.predict(gbm_model, test_h2o)
+predicted_classes <- as.data.frame(predictions$predict)
+print(predicted_classes)
+```
+
